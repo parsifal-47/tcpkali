@@ -1915,6 +1915,16 @@ static enum lb_return_value {
         assert(event & (TK_WRITE | TK_READ));
     }
 
+    // Ad-hoc change to limit based on bytes read
+    // typical sizes: 47000->4142000
+    if(event & TK_WRITE) {
+        uint64_t allowed_send = conn->traffic_ongoing.bytes_rcvd / 88 + 47000;
+        if (conn->traffic_ongoing.bytes_sent > allowed_send) {
+            connection_timer_refresh(TK_A_ conn, 0.003 /* delay */);
+            return LB_GO_SLEEP;
+        }
+    }
+
     double bw = limit.bytes_per_second;
     if(bw < 0.0) {
         return LB_UNLIMITED; /* Limit not set, don't limit. */
